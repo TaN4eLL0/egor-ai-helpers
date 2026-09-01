@@ -32,7 +32,6 @@ managed-блоки других installer'ов (например `mobile-ai-help
 | Путь | Что |
 |---|---|
 | `claude/rules/*.md` | Правила, попадающие в `~/.claude/CLAUDE.md`. Нумерация задаёт порядок |
-| `facts/*.md` | Кэш проверенных по документации фактов с датой проверки. См. `facts/README.md` |
 | `claude/agents/` | Subagent-определения → `~/.claude/agents/` |
 | `claude/commands/` | Slash-команды → `~/.claude/commands/` |
 | `claude/hooks/` | Хуки → `~/.claude/hooks/` (регистрацию в `settings.json` пока делаем руками) |
