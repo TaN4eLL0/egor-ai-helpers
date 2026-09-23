@@ -12,6 +12,22 @@ git clone <repo-url> ~/egor-ai-helpers && cd ~/egor-ai-helpers && ./install.sh
 
 Правила подхватываются в **новой** сессии — текущая уже загрузила старый контекст.
 
+## Почему правила не устаревают
+
+Блок в `~/.claude/CLAUDE.md` — это копия `claude/rules/`, поэтому правка файла
+правил сама по себе до сессий не доходит. Чтобы копия не отставала, `install.sh`
+ставит две страховки:
+
+- **git hooks.** `core.hooksPath` указывает на `githooks/`, и после `commit`,
+  `pull` (`post-merge`), `checkout` и `rebase` (`post-rewrite`) installer
+  перезапускается сам. Любое изменение правил через git сразу попадает в
+  `~/.claude/CLAUDE.md`, и следующая сессия видит его без ручных шагов.
+- **SessionStart hook.** `egor-ai-rules-sync.sh` в начале каждой сессии
+  сравнивает блок с `claude/rules/` через `install.sh --check`. Если правила
+  поменяли без коммита и блок отстал, hook пересобирает его и выводит свежие
+  правила прямо в контекст этой сессии, поэтому устаревшая копия не действует
+  даже один раз.
+
 ## Как это работает
 
 `install.sh` склеивает все файлы `claude/rules/*.md` в порядке имён и вставляет
@@ -34,7 +50,8 @@ managed-блоки других installer'ов (например `mobile-ai-help
 | `claude/rules/*.md` | Правила, попадающие в `~/.claude/CLAUDE.md`. Нумерация задаёт порядок |
 | `claude/agents/` | Subagent-определения → `~/.claude/agents/` |
 | `claude/commands/` | Slash-команды → `~/.claude/commands/` |
-| `claude/hooks/` | Хуки → `~/.claude/hooks/` (регистрацию в `settings.json` пока делаем руками) |
+| `claude/hooks/` | Хуки → `~/.claude/hooks/`; `egor-ai-rules-sync.sh` installer сам регистрирует как SessionStart |
+| `githooks/` | git hooks репозитория, перезапускают installer после commit / pull / checkout |
 | `tools/` | CLI-инструменты |
 
 Пустые директории — задел под расширение, installer их молча пропускает.
@@ -55,6 +72,10 @@ managed-блоки других installer'ов (например `mobile-ai-help
 
 ```bash
 ./install.sh
+```
+
+```bash
+./install.sh --check
 ```
 
 ```bash

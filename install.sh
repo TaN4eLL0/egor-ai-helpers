@@ -16,6 +16,8 @@
 #   ./install.sh              # install / refresh
 #   ./install.sh --dry-run    # print the block that would be written
 #   ./install.sh --uninstall  # remove the managed block and installed payload
+#   ./install.sh --check      # exit 0 if ~/.claude/CLAUDE.md matches claude/rules/, 1 if stale
+#   ./install.sh --quiet      # install / refresh without output (used by the git hooks)
 
 set -euo pipefail
 
@@ -29,10 +31,14 @@ MARKER_END='<!-- egor-ai:end -->'
 
 DRY_RUN=0
 UNINSTALL=0
+CHECK=0
+QUIET=0
 for arg in "$@"; do
     case "$arg" in
         --dry-run)   DRY_RUN=1 ;;
         --uninstall) UNINSTALL=1 ;;
+        --check)     CHECK=1 ;;
+        --quiet)     QUIET=1 ;;
         -h|--help)   grep -E '^# ' "$0" | sed 's/^# \?//'; exit 0 ;;
         *) echo "Unknown arg: $arg (use --help)" >&2; exit 1 ;;
     esac
@@ -84,6 +90,60 @@ else:
 PY
 }
 
+SESSION_HOOK_CMD="${CLAUDE_DIR}/hooks/egor-ai-rules-sync.sh"
+SETTINGS_JSON="${CLAUDE_DIR}/settings.json"
+
+session_hook() {
+    ACTION="$1" HOOK_CMD="$SESSION_HOOK_CMD" SETTINGS="$SETTINGS_JSON" python3 - <<'PY'
+import json, os, pathlib
+
+path = pathlib.Path(os.environ["SETTINGS"])
+cmd = os.environ["HOOK_CMD"]
+raw = path.read_text() if path.exists() else "{}"
+data = json.loads(raw or "{}")
+groups = data.setdefault("hooks", {}).setdefault("SessionStart", [])
+present = any(h.get("command") == cmd for g in groups for h in g.get("hooks", []))
+
+if os.environ["ACTION"] == "register":
+    if present:
+        print("  SessionStart hook already registered")
+        raise SystemExit
+    groups.append({"hooks": [{"type": "command", "command": cmd}]})
+    message = "  registered SessionStart hook"
+else:
+    if not present:
+        raise SystemExit
+    for g in groups:
+        g["hooks"] = [h for h in g.get("hooks", []) if h.get("command") != cmd]
+    data["hooks"]["SessionStart"] = [g for g in groups if g["hooks"]]
+    message = "  removed SessionStart hook"
+
+path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + ("\n" if raw.endswith("\n") else ""))
+print(message)
+PY
+}
+
+if [[ "$CHECK" -eq 1 ]]; then
+    CHECK_BLOCK="$(mktemp)"
+    trap 'rm -f "$CHECK_BLOCK"' EXIT
+    build_block > "$CHECK_BLOCK"
+    if BLOCK_FILE="$CHECK_BLOCK" CLAUDE_MD_PATH="$CLAUDE_MD" python3 - <<'PY'
+import os, pathlib, re, sys
+
+target = pathlib.Path(os.environ["CLAUDE_MD_PATH"])
+block = pathlib.Path(os.environ["BLOCK_FILE"]).read_text().rstrip()
+text = target.read_text() if target.exists() else ""
+found = re.search(r"<!-- egor-ai:start -->.*?<!-- egor-ai:end -->", text, flags=re.DOTALL)
+sys.exit(0 if found and found.group(0).rstrip() == block else 1)
+PY
+    then
+        exit 0
+    fi
+    exit 1
+fi
+
+[[ "$QUIET" -eq 1 ]] && exec >/dev/null
+
 # ----- uninstall ---------------------------------------------------------
 if [[ "$UNINSTALL" -eq 1 ]]; then
     echo
@@ -113,6 +173,8 @@ PY
         done
     done
     rm -f "${CONFIG_DIR}/install.conf"
+    [[ -f "$SETTINGS_JSON" ]] && session_hook remove
+    git -C "$REPO_ROOT" config --unset core.hooksPath 2>/dev/null || true
     ok "Uninstall complete."
     exit 0
 fi
@@ -166,6 +228,14 @@ if [[ "$installed_any" -eq 0 ]]; then
     say "    nothing to install yet (placeholders are empty)"
 fi
 ok "Payload synced"
+
+if [[ -x "$SESSION_HOOK_CMD" ]]; then
+    session_hook register
+fi
+if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1 && [[ -d "${REPO_ROOT}/githooks" ]]; then
+    git -C "$REPO_ROOT" config core.hooksPath githooks
+    say "  git hooks: core.hooksPath -> githooks (rules re-install on commit, pull and checkout)"
+fi
 
 # ----- 3. install.conf ---------------------------------------------------
 echo
