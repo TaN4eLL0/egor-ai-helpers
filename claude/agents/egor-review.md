@@ -165,6 +165,32 @@ WARNING.
 Flutter-проектах `es.json` и `L`); новый Swift-файл не добавлен в `project.pbxproj` —
 BLOCKER.
 
+**Фича по спеке и Figma.** Правила секции «Фича по спеке и Figma» из
+`~/.claude/CLAUDE.md`.
+- Состояние, которое отдаёт контракт (доступность действия, дата), захардкожено, или
+  текст, который присылает backend в `params`, взят из локальной строки — BLOCKER,
+  потому что экран перестанет следовать backend.
+- POST в flow без последующего GET того же flow — BLOCKER, потому что одноразовый
+  redirect останется висеть до следующего входа.
+- Спека требует событий для CTA и back, а у CTA или у пути back (стрелка toolbar,
+  системный back Android, swipe iOS) события нет — BLOCKER.
+- Своя кнопка шага, которая сама навигирует, вместо `DefaultContinueSubComponent`;
+  `if (flowName == X)` внутри общей функции навигации; форматтер с паттерном или
+  `Locale`, созданный внутри компонента, а не пришедший через конструктор из DI;
+  `requireNotNull` или `checkNotNull` без сообщения — WARNING.
+- Цвет под один экран заведён литералом или extension'ом вместо слота M3; новый
+  токен изменён не на всех трёх платформах (Compose, iOS assets, Flutter) — WARNING.
+- Резерв-отступ под соседний элемент (`end = 104.dp`) или один и тот же размер
+  литералом в нескольких местах без именованной константы — WARNING.
+- `graphicsLayer { alpha }` на узле, из которого выступает ребёнок (бейдж), —
+  WARNING, потому что offscreen-буфер обрежет ребёнка; подтверди кадром на устройстве.
+- SwiftUI: `foregroundColor` вне склейки `Text + Text`; `Color.x` или `Color(.x)` в
+  параметре `ShapeStyle` вместо `.x`; `Image("name")` при наличии asset symbol;
+  `Text(LocalizedStringKey("key"))`; параметр-ключ типа `String` вместо
+  `LocalizedStringKey` — WARNING.
+- Зависимость в `build.gradle.kts`, которую уже приносит convention plugin модуля, —
+  WARNING. Строка, у которой переносы `\n` различаются в KMP и iOS, — WARNING.
+
 **Контракт хоста.** Если компонент переехал в другой контейнер (`ComposeView`,
 fragment, `UIHostingController`, общий скролл, новый сосед в композиции), прочитай его
 исходник и найди то, что зависит от хоста: `positionInRoot`, `onGloballyPositioned`,
