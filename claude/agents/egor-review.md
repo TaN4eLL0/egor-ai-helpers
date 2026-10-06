@@ -180,8 +180,6 @@ BLOCKER.
   `requireNotNull` или `checkNotNull` без сообщения — WARNING.
 - Цвет под один экран заведён литералом или extension'ом вместо слота M3; новый
   токен изменён не на всех трёх платформах (Compose, iOS assets, Flutter) — WARNING.
-- Резерв-отступ под соседний элемент (`end = 104.dp`) или один и тот же размер
-  литералом в нескольких местах без именованной константы — WARNING.
 - `graphicsLayer { alpha }` на узле, из которого выступает ребёнок (бейдж), —
   WARNING, потому что offscreen-буфер обрежет ребёнка; подтверди кадром на устройстве.
 - SwiftUI: `foregroundColor` вне склейки `Text + Text`; `Color.x` или `Color(.x)` в
