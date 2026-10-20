@@ -41,6 +41,18 @@ with the decision you need to make.
   by official docs cite them.
 - **`egor-review` agent.** Read-only review of your own diff or a team PR against
   these rules. Every finding is confirmed with `file:line` and a quoted line.
+  Keeps its own memory of past findings across sessions.
+- **`egor-implement` agent.** Executes one fully specified brief in an isolated
+  git worktree and hands back a branch, so the main checkout stays clean and
+  independent tasks can run in parallel.
+- **Hooks that cannot be talked out of.** A rule is advice; a hook is enforced.
+  `--amend`, force-push and history rewrites are denied unless the command
+  carries `EGOR_AI_ALLOW_REWRITE=1`; a new comment in a `.kt` / `.swift` file is
+  denied; a turn that edited code cannot end without a verification fact and a
+  "not done" line; the working-tree state is snapshotted before compaction.
+- **Skills loaded on demand.** `/fix-crash` holds the full confidence-gated
+  protocol and costs nothing until a bug shows up; `/retro` turns this session's
+  corrections into a proposed diff to the rules.
 - **Self-healing install.** Git hooks and a `SessionStart` hook keep the copy in
   `~/.claude/CLAUDE.md` in sync with the repo, so a stale rule never loads.
 - **Context economy.** Stack-specific rules are path-scoped and load only when a
@@ -83,6 +95,18 @@ The review agent is invoked in chat, for example "review my changes" for the
 current diff or "review PR #123" for an open pull request. It only reads: it never
 edits files and never posts to GitHub unless asked explicitly. The report lands in
 the terminal grouped by severity: BLOCKER, WARNING, NITPICK.
+
+The implementer agent takes a brief ("implement this in a worktree: files, the
+behaviour change, how to verify") and returns a branch, a commit and a
+verification line. Review the branch with the review agent before merging.
+
+Skills: `/fix-crash` loads automatically on words like "crash", "bug" or a stack
+trace; `/retro` is manual, run it at the end of a session.
+
+Hooks run on their own once installed. If one blocks something you did ask for,
+the denial message names the escape hatch (for history rewrites, prefix the
+command with `EGOR_AI_ALLOW_REWRITE=1`). To switch all of them off, remove the
+`egor-ai-*` entries from `~/.claude/settings.json` or run `--uninstall`.
 
 ## Before / after
 
@@ -129,14 +153,23 @@ Two safeguards keep the copy fresh:
 |---|---|
 | `claude/rules/*.md` | Rules. The number prefix sets the concatenation order |
 | `claude/agents/` | Subagents → `~/.claude/agents/` |
+| `claude/skills/<name>/` | Skills → `~/.claude/skills/<name>/` |
 | `claude/commands/` | Slash commands → `~/.claude/commands/` |
-| `claude/hooks/` | Hooks → `~/.claude/hooks/`; `egor-ai-rules-sync.sh` is registered as `SessionStart` |
+| `claude/hooks/` | Hook scripts → `~/.claude/hooks/`; `hooks.json` says which event and matcher each one is registered under in `~/.claude/settings.json` |
 | `githooks/` | Repo git hooks |
+
+| Hook | Event | What it enforces |
+|---|---|---|
+| `egor-ai-rules-sync.sh` | `SessionStart` | Rebuilds a stale rules block and prints it into the session |
+| `egor-ai-no-rewrite.sh` | `PreToolUse` (Bash) | Denies `--amend`, force-push, `filter-branch` without `EGOR_AI_ALLOW_REWRITE=1` |
+| `egor-ai-no-comments.py` | `PreToolUse` (Edit, Write) | Denies new comments in `.kt`, `.kts`, `.swift`; linter directives and KDoc in shared libraries pass |
+| `egor-ai-report-gate.py` | `Stop` | Sends the turn back once if code was edited and the answer has no verification fact or "not done" line |
+| `egor-ai-precompact.sh` | `PreCompact` | Writes branch, `git status` and `git diff --stat` to `~/.claude/egor-ai/compact-state.md` |
 
 | Rule file | Loaded | When it applies |
 |---|---|---|
 | `10-communication-style` | always | Language, length, clarity, sourcing, reports |
-| `20-crash-fix-confidence` | always | Investigating a crash or a bug |
+| `20-crash-fix-confidence` | always | The 93% gate; the full protocol lives in the `fix-crash` skill |
 | `30-implementation` | always | Writing any code; context economy |
 | `40-kmp-mobile` | on `*.kt`, `*.kts`, `*.swift` | Coroutines, state, DI, Compose, SwiftUI |
 | `45-mobile-feature-delivery` | on `*.kt`, `*.kts`, `*.swift` | Building a feature from a spec and Figma |

@@ -2,6 +2,8 @@
 name: egor-review
 description: Strict review of a local diff or an open team PR in KMP / Compose / SwiftUI repos (CRDES, MMES, MMMX, kmp-common-components, idf-kmm-core). Checks the diff against the egor-ai-helpers rules on top of the repo's own conventions — root cause, blast radius by readers on both platforms, minimal diff, host contract, layout ownership, Decompose and coroutine baseline, iOS and l10n parity. Every finding is confirmed with file:line and a quoted line. Use proactively after implementing a change and whenever asked to review a PR ("сделай ревью", "посмотри PR").
 model: opus
+effort: high
+memory: user
 disallowedTools: Edit, Write, NotebookEdit
 ---
 

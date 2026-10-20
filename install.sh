@@ -7,8 +7,9 @@
 # copied to ~/.claude/rules/egor-ai-<name>.md and loads only when Claude
 # reads a matching file. Also copies claude/agents,
 # claude/commands and claude/hooks into ~/.claude/, registers the SessionStart
-# hook and the repo git hooks, and records the checkout path in
-# ~/.config/egor-ai-helpers/install.conf.
+# hooks and the repo git hooks, and records the checkout path in
+# ~/.config/egor-ai-helpers/install.conf. Hooks listed in claude/hooks/hooks.json
+# are registered in ~/.claude/settings.json; claude/skills/*/ go to ~/.claude/skills/.
 #
 # Safe to re-run: it only ever rewrites its own marker block and never pulls
 # git on its own.
@@ -95,36 +96,44 @@ else:
 PY
 }
 
-SESSION_HOOK_CMD="${CLAUDE_DIR}/hooks/egor-ai-rules-sync.sh"
 SETTINGS_JSON="${CLAUDE_DIR}/settings.json"
+HOOKS_MANIFEST="${REPO_ROOT}/claude/hooks/hooks.json"
 
-session_hook() {
-    ACTION="$1" HOOK_CMD="$SESSION_HOOK_CMD" SETTINGS="$SETTINGS_JSON" python3 - <<'PY'
+sync_hooks() {
+    ACTION="$1" MANIFEST="$HOOKS_MANIFEST" HOOKS_DIR="${CLAUDE_DIR}/hooks" SETTINGS="$SETTINGS_JSON" python3 - <<'PY'
 import json, os, pathlib
 
-path = pathlib.Path(os.environ["SETTINGS"])
-cmd = os.environ["HOOK_CMD"]
-raw = path.read_text() if path.exists() else "{}"
+settings = pathlib.Path(os.environ["SETTINGS"])
+hooks_dir = os.environ["HOOKS_DIR"]
+manifest = json.loads(pathlib.Path(os.environ["MANIFEST"]).read_text())
+raw = settings.read_text() if settings.exists() else "{}"
 data = json.loads(raw or "{}")
-groups = data.setdefault("hooks", {}).setdefault("SessionStart", [])
-present = any(h.get("command") == cmd for g in groups for h in g.get("hooks", []))
+hooks = data.setdefault("hooks", {})
+
+def ours(h):
+    return os.path.dirname(h.get("command", "")) == hooks_dir and os.path.basename(h.get("command", "")).startswith("egor-ai-")
+
+for event, groups in list(hooks.items()):
+    for g in groups:
+        g["hooks"] = [h for h in g.get("hooks", []) if not ours(h)]
+    hooks[event] = [g for g in groups if g.get("hooks")]
+    if not hooks[event]:
+        del hooks[event]
 
 if os.environ["ACTION"] == "register":
-    if present:
-        print("  SessionStart hook already registered")
-        raise SystemExit
-    groups.append({"hooks": [{"type": "command", "command": cmd}]})
-    message = "  registered SessionStart hook"
+    for event, entries in manifest.items():
+        for e in entries:
+            group = {"hooks": [{"type": "command", "command": f"{hooks_dir}/{e['command']}"}]}
+            if e.get("matcher"):
+                group["matcher"] = e["matcher"]
+            hooks.setdefault(event, []).append(group)
+    print("  hooks registered: " + ", ".join(f"{ev} x{len(en)}" for ev, en in manifest.items()))
 else:
-    if not present:
-        raise SystemExit
-    for g in groups:
-        g["hooks"] = [h for h in g.get("hooks", []) if h.get("command") != cmd]
-    data["hooks"]["SessionStart"] = [g for g in groups if g["hooks"]]
-    message = "  removed SessionStart hook"
+    print("  hooks removed from settings.json")
 
-path.write_text(json.dumps(data, indent=2, ensure_ascii=False) + ("\n" if raw.endswith("\n") else ""))
-print(message)
+if not hooks:
+    data.pop("hooks", None)
+settings.write_text(json.dumps(data, indent=2, ensure_ascii=False) + ("\n" if raw.endswith("\n") else ""))
 PY
 }
 
@@ -181,8 +190,11 @@ PY
         done
     done
     rm -f "${USER_RULES_DIR}"/egor-ai-*.md
+    for d in "${REPO_ROOT}"/claude/skills/*/; do
+        [[ -d "$d" ]] && rm -rf "${CLAUDE_DIR}/skills/$(basename "$d")"
+    done
     rm -f "${CONFIG_DIR}/install.conf"
-    [[ -f "$SETTINGS_JSON" ]] && session_hook remove
+    [[ -f "$SETTINGS_JSON" ]] && sync_hooks remove
     git -C "$REPO_ROOT" config --unset core.hooksPath 2>/dev/null || true
     ok "Uninstall complete."
     exit 0
@@ -235,19 +247,28 @@ for kind in agents commands hooks; do
     mkdir -p "${CLAUDE_DIR}/${kind}"
     for f in "$src_dir"/*; do
         [[ -f "$f" ]] || continue
+        [[ "$(basename "$f")" == "hooks.json" ]] && continue
         cp "$f" "${CLAUDE_DIR}/${kind}/"
         [[ "$kind" == "hooks" ]] && chmod +x "${CLAUDE_DIR}/${kind}/$(basename "$f")"
         say "    - ${kind}/$(basename "$f")"
         installed_any=1
     done
 done
+for d in "${REPO_ROOT}"/claude/skills/*/; do
+    [[ -f "${d}SKILL.md" ]] || continue
+    name="$(basename "$d")"
+    mkdir -p "${CLAUDE_DIR}/skills/${name}"
+    cp -R "${d}". "${CLAUDE_DIR}/skills/${name}/"
+    say "    - skills/${name}"
+    installed_any=1
+done
 if [[ "$installed_any" -eq 0 ]]; then
     say "    nothing to install yet (placeholders are empty)"
 fi
 ok "Payload synced"
 
-if [[ -x "$SESSION_HOOK_CMD" ]]; then
-    session_hook register
+if [[ -f "$HOOKS_MANIFEST" ]]; then
+    sync_hooks register
 fi
 if git -C "$REPO_ROOT" rev-parse --git-dir >/dev/null 2>&1 && [[ -d "${REPO_ROOT}/githooks" ]]; then
     git -C "$REPO_ROOT" config core.hooksPath githooks

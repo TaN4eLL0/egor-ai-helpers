@@ -1,0 +1,15 @@
+{
+  "SessionStart": [
+    { "command": "egor-ai-rules-sync.sh" }
+  ],
+  "PreToolUse": [
+    { "matcher": "Bash", "command": "egor-ai-no-rewrite.sh" },
+    { "matcher": "Edit|Write", "command": "egor-ai-no-comments.py" }
+  ],
+  "Stop": [
+    { "command": "egor-ai-report-gate.py" }
+  ],
+  "PreCompact": [
+    { "command": "egor-ai-precompact.sh" }
+  ]
+}

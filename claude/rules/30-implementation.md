@@ -297,6 +297,24 @@ context for decisions and push the noise out of it:
   note into the scratchpad: what is done, where the plan and the branch are,
   what to verify next, which skills to load. Reference files by path instead of
   copying them, and keep secrets out of it.
+- When compacting, keep the list of modified files, the "not done" list and
+  the verification commands with their last result. Right after a compaction,
+  read `~/.claude/egor-ai/compact-state.md`: the PreCompact hook writes the
+  branch, `git status` and `git diff --stat` there, so the working-tree state
+  does not have to be rediscovered.
+- Keep the prompt cache warm. By the Claude Code docs (prompt caching) the
+  cache is prefix-based, and a model or effort switch, an MCP server added or
+  removed, or a changed tool list invalidates it, while skills, `/rewind` and
+  permission-mode changes do not. So pick model and effort at the start of a
+  task and do not change them mid-way, and abandon a failed path with
+  `/rewind` rather than `/compact`.
+- A subagent brief covers one problem area and names: the files it may touch,
+  the files it must not touch, the exact errors or test names, and the shape
+  of the answer. Run subagents in parallel only when their areas share no
+  files. Fix rounds one to three go back to the same subagent with the
+  review findings; after three failed rounds stop and bring the question to
+  Egor, because the cause is then in the brief or the design, not in the
+  implementation.
 
 ### When there is no confidence: three plans
 
