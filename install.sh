@@ -2,7 +2,10 @@
 # install.sh — idempotent installer for egor-ai-helpers
 #
 # Splices claude/rules/*.md (concatenated in filename order) into
-# ~/.claude/CLAUDE.md between the egor-ai markers, copies claude/agents,
+# ~/.claude/CLAUDE.md between the egor-ai markers. A rule file that starts
+# with YAML frontmatter containing `paths:` is path-scoped instead: it is
+# copied to ~/.claude/rules/egor-ai-<name>.md and loads only when Claude
+# reads a matching file. Also copies claude/agents,
 # claude/commands and claude/hooks into ~/.claude/, registers the SessionStart
 # hook and the repo git hooks, and records the checkout path in
 # ~/.config/egor-ai-helpers/install.conf.
@@ -26,6 +29,11 @@ CLAUDE_MD="${CLAUDE_DIR}/CLAUDE.md"
 CONFIG_DIR="${HOME}/.config/egor-ai-helpers"
 MARKER_START='<!-- egor-ai:start -->'
 MARKER_END='<!-- egor-ai:end -->'
+USER_RULES_DIR="${CLAUDE_DIR}/rules"
+
+is_scoped() { head -n 1 "$1" | grep -q '^---$' && sed -n '2,/^---$/p' "$1" | grep -q '^paths:'; }
+scoped_target() { printf '%s/egor-ai-%s' "$USER_RULES_DIR" "$(basename "$1")"; }
+render() { sed -e "s|{{REPO_ROOT}}|${REPO_ROOT}|g" "$1"; }
 
 DRY_RUN=0
 UNINSTALL=0
@@ -53,9 +61,10 @@ build_block() {
     local first=1
     for f in "${RULES_DIR}"/*.md; do
         [[ -f "$f" ]] || continue
+        is_scoped "$f" && continue
         [[ "$first" -eq 1 ]] || printf '\n'
         first=0
-        sed -e "s|{{REPO_ROOT}}|${REPO_ROOT}|g" "$f"
+        render "$f"
     done
     printf '\n%s\n' "$MARKER_END"
 }
@@ -133,6 +142,10 @@ found = re.search(r"<!-- egor-ai:start -->.*?<!-- egor-ai:end -->", text, flags=
 sys.exit(0 if found and found.group(0).rstrip() == block else 1)
 PY
     then
+        for f in "${RULES_DIR}"/*.md; do
+            is_scoped "$f" || continue
+            cmp -s <(render "$f") "$(scoped_target "$f")" || exit 1
+        done
         exit 0
     fi
     exit 1
@@ -167,6 +180,7 @@ PY
             rm -f "${CLAUDE_DIR}/${kind}/$(basename "$f")"
         done
     done
+    rm -f "${USER_RULES_DIR}"/egor-ai-*.md
     rm -f "${CONFIG_DIR}/install.conf"
     [[ -f "$SETTINGS_JSON" ]] && session_hook remove
     git -C "$REPO_ROOT" config --unset core.hooksPath 2>/dev/null || true
@@ -181,7 +195,11 @@ if ! compgen -G "${RULES_DIR}/*.md" >/dev/null; then
     exit 1
 fi
 for f in "${RULES_DIR}"/*.md; do
-    say "    - $(basename "$f")"
+    if is_scoped "$f"; then
+        say "    - $(basename "$f")  (path-scoped -> ~/.claude/rules/)"
+    else
+        say "    - $(basename "$f")"
+    fi
 done
 
 TMP_BLOCK="$(mktemp)"
@@ -200,6 +218,12 @@ mkdir -p "$CLAUDE_DIR"
 touch "$CLAUDE_MD"
 splice "$TMP_BLOCK"
 ok "${CLAUDE_MD} synced"
+
+for f in "${RULES_DIR}"/*.md; do
+    is_scoped "$f" || continue
+    mkdir -p "$USER_RULES_DIR"
+    render "$f" > "$(scoped_target "$f")"
+done
 
 echo
 say "2/3  Installing agents / commands / hooks ..."

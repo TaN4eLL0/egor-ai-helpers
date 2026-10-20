@@ -1,273 +1,307 @@
-## Написание кода
+## Writing code
 
-Действует всегда, когда пишешь или меняешь код, — не только в новых фичах.
+Applies always, whenever you write or change code, not only in new features.
 
-### Стиль проекта важнее всего остального
+### Project style matters more than anything else
 
-Перед первой строкой кода прочитай два-три существующих файла того же слоя и
-повтори их устройство: naming, порядок членов класса, обработку ошибок,
-подход к DI, структуру тестов, формат логов. Стиль проекта главнее и твоих
-предпочтений, и того, «как принято в индустрии». Если в проекте делают не так,
-как в официальном примере, — делай как в проекте, а расхождение назови мне
-отдельно, решение менять стиль за мной.
+Before the first line of code, read two or three existing files of the same
+layer and repeat their structure: naming, order of class members, error
+handling, approach to DI, test structure, log format. Project style ranks above
+both your preferences and "how it is done in the industry". If the project does
+it differently from the official example, do it the project's way, and name the
+discrepancy to me separately; the decision to change the style is mine.
 
-Документация проекта для агентов читается до кода, а не после. Если в
-репозитории есть `knowledge/`, `docs/` или похожая база с соглашениями,
-архитектурой модулей и паттернами, найди в ней файлы по теме задачи и прочитай
-их прежде, чем выбирать, куда класть код и какие стили брать. База, которую
-только обновляют после работы, не предотвращает ни одной ошибки, потому что к
-моменту обновления код уже написан.
+The project's documentation for agents is read before the code, not after. If
+the repository has `knowledge/`, `docs/` or a similar base with conventions,
+module architecture and patterns, find the files in it on the task's topic and
+read them before choosing where to put the code and which styles to take. A
+base that is only updated after the work prevents not a single mistake, because
+by the time of the update the code is already written.
 
-Перед тем как писать новый экран, виджет или слой, найди в проекте соседнюю
-фичу, которая уже решает похожую задачу, и повтори её раскладку по модулям,
-пакетам и файлам. Своё устройство изобретай только тогда, когда такой соседки
-нет, и тогда назови это в отчёте.
+Before writing a new screen, widget or layer, find a neighbouring feature in
+the project that already solves a similar task, and repeat its layout across
+modules, packages and files. Invent your own structure only when there is no
+such neighbour, and then name that in the report.
 
-### Расширяемость
+### Extensibility
 
-Расширяемость измеряется одним критерием: добавление следующего однотипного
-случая требует правки **в одном месте** и не требует менять существующие вызовы.
-Она не измеряется количеством интерфейсов, слоёв и фабрик.
+Extensibility is measured by one criterion: adding the next case of the same
+kind requires a change **in one place** and does not require changing existing
+calls. It is not measured by the number of interfaces, layers and factories.
 
-Поэтому точку расширения добавляй только тогда, когда второй случай уже
-существует в коде или назван в задаче. Абстракция «на будущее» под единственный
-случай — это не расширяемость, а лишний слой, который придётся читать всем
-следующим. Если видишь, что расширение вероятно, но второго случая пока нет, —
-скажи это словами в отчёте, а не абстракцией в коде.
+Therefore add an extension point only when the second case already exists in
+the code or is named in the task. An abstraction "for the future" under a single
+case is not extensibility, but an extra layer that everyone after you will have
+to read. If you see that an extension is likely, but there is no second case
+yet, say so in words in the report, not as an abstraction in the code.
 
-### Починка в общей библиотеке важнее обхода в проекте
+### A fix in the shared library beats a workaround in the project
 
-Мы делаем качественную работу, поэтому упор всегда на переиспользуемость и
-расширяемость, а не на костыль, который быстрее написать. Когда причина проблемы
-лежит в общей библиотеке (`idf-kmm-core`, `kmp-common-components`), правильное
-место правки — библиотека, а не обход в проекте. Обход в проекте оставляет
-поломку жить, и следующий проект напорется на неё снова, а значит цена обхода —
-не ноль, а ещё одна такая же правка позже.
+We do quality work, so the emphasis is always on reusability and extensibility,
+not on a crutch that is faster to write. When the cause of a problem lies in a
+shared library (`idf-kmm-core`, `kmp-common-components`), the right place for
+the change is the library, not a workaround in the project. A workaround in the
+project leaves the breakage alive, and the next project will run into it again,
+which means the cost of the workaround is not zero, but one more such change
+later.
 
-Править библиотеку вместо проекта нужно тогда, когда одновременно выполнены три
-условия:
+Changing the library instead of the project is required when three conditions
+hold at the same time:
 
-1. правка в библиотеке простая;
-2. уверенность **100%**, что она не заденет другие экраны и другие проекты,
-   и эта уверенность подтверждена списком вызывающих мест, а не ощущением;
-3. это архитектурно правильный и расширяемый способ, а не подгонка библиотеки
-   под один частный случай.
+1. the change in the library is simple;
+2. **100%** confidence that it won't affect other screens and other projects,
+   and that confidence is confirmed by a list of calling places, not a feeling;
+3. it is the architecturally correct and extensible way, not bending the
+   library to one particular case.
 
-Если хотя бы одно условие не выполнено — обход в проекте допустим, но тогда
-назови в отчёте, какое именно условие не выполнилось.
+If at least one condition is not met, a workaround in the project is
+acceptable, but then name in the report exactly which condition was not met.
 
-Отдельно про уверенность в формулировках. Не пиши «лучше сделать в проекте» или
-«лучше расширить кор» как готовый вывод. Сначала перечисли варианты с их
-последствиями — правка в библиотеке, правка в проекте, и промежуточные, если они
-есть, — укажи для каждого радиус изменения и цену релизного цикла, и только потом
-дай свою рекомендацию, помеченную как рекомендация. Решение принимаю я.
+Separately about confidence in wording. Don't write "better to do it in the
+project" or "better to extend the core" as a ready conclusion. First list the
+options with their consequences: a change in the library, a change in the
+project, and intermediate ones if there are any; state for each the blast
+radius and the cost of the release cycle, and only then give your
+recommendation, marked as a recommendation. I make the decision.
 
-### Читаемость
+### Readability
 
-- Имя говорит, что делает функция, без чтения её тела. Если для понимания нужно
-  открыть тело — имя плохое.
-- Функция целиком видна на экране. Не влезает — значит внутри больше одной
-  ответственности.
-- Сокращения — только те, что уже приняты в проекте. Никаких `mgr`, `ctx`, `res`
-  по своей инициативе.
-- Вложенность условий не глубже двух уровней, дальше early return.
-- Вложенность условий не глубже двух уровней, дальше early return — см. также
-  раздел про комментарии ниже.
+- The name says what the function does without reading its body. If you need
+  to open the body to understand, the name is bad.
+- The function fits entirely on the screen. If it doesn't fit, there is more
+  than one responsibility inside.
+- Abbreviations only those already accepted in the project. No `mgr`, `ctx`,
+  `res` on your own initiative.
+- Condition nesting no deeper than two levels, beyond that early return.
 
-### Комментариев в коде не оставляй
+### Leave no comments in the code
 
-Не пиши комментарии, пока я не попросил. Это относится ко всему: пояснениям над
-функцией, `//` в конце строки, KDoc и docstring, TODO и FIXME, разделителям вроде
-`// --- helpers ---`, а также к комментариям, описывающим твою же правку
-(«added retry here»). Причина в том, что такой комментарий пересказывает код,
-который я и так читаю, устаревает при первой же следующей правке и после этого
-начинает врать.
+Don't write comments until I ask. This applies to everything: explanations
+above a function, `//` at the end of a line, KDoc and docstrings, TODO and
+FIXME, separators like `// --- helpers ---`, and also comments describing your
+own change ("added retry here"). The reason is that such a comment retells the
+code I am reading anyway, goes stale at the very next change, and after that
+starts lying.
 
-Из этого есть ровно три исключения:
+There are exactly three exceptions to this:
 
-1. я попросил прокомментировать;
-2. в проекте так принято в этом же слое, и тогда действует правило «стиль проекта
-   важнее» — повтори форму соседних файлов;
-3. комментарий нужен как часть работающего кода: аннотация или директива
-   (`@Suppress`, `// swiftlint:disable`, `// ktlint-disable`, лицензионная шапка,
-   сгенерированный маркер).
+1. I asked for a comment;
+2. the project does it that way in this same layer, and then the rule "project
+   style matters more" applies: repeat the form of the neighbouring files;
+3. the comment is needed as part of working code: an annotation or directive
+   (`@Suppress`, `// swiftlint:disable`, `// ktlint-disable`, a licence header,
+   a generated marker).
 
-Исключение не применяй молча. То, что соседние файлы густо прокомментированы,
-ещё не значит, что второе исключение сработало, потому что явное правило «не
-пиши комментарии» сильнее вывода, сделанного по соседнему коду. Если считаешь,
-что исключение подходит, спроси до того, как писать комментарий.
+Don't apply an exception silently. The fact that neighbouring files are densely
+commented doesn't yet mean the second exception fired, because the explicit rule
+"don't write comments" is stronger than a conclusion drawn from neighbouring
+code. If you think an exception applies, ask before writing the comment.
 
-Существующие чужие комментарии не удаляй заодно с правкой: их убирают отдельной
-задачей и по просьбе. Если считаешь, что место без комментария непонятно, скажи
-мне это в отчёте словами, а не оставляй пояснение в коде.
+Don't delete existing comments by others along with the change: they are
+removed as a separate task and on request. If you think a place without a
+comment is unclear, tell me that in words in the report, rather than leaving
+an explanation in the code.
 
-У этого правила две оговорки. Первая: комментарий, который твоя правка сделала
-ложным, правится в той же правке, иначе он начинает врать прямо в твоём диффе.
-Вторая: в общих библиотеках (`kmp-common-components`, `idf-kmm-core`) KDoc на
-публичном API обязателен по командному правилу `kmp/api-stability/kdoc-mandatory`.
-Поэтому новое значение публичного enum или новый публичный метод получает KDoc
-по форме соседних записей, и спрашивать отдельно не нужно.
+This rule has two caveats. First: a comment that your change made false is
+fixed in the same change, otherwise it starts lying right in your diff. Second:
+in the shared libraries (`kmp-common-components`, `idf-kmm-core`) KDoc on the
+public API is mandatory by the team rule `kmp/api-stability/kdoc-mandatory`.
+Therefore a new value of a public enum or a new public method gets KDoc in the
+form of the neighbouring entries, and there is no need to ask separately.
 
-### Без лишних разносов по файлам
+### No needless spreading across files
 
-- Новый файл — только когда сущность нужна больше чем из одного места, либо
-  когда текущий файл уже больше того, что принято в проекте.
-- Новую директорию или package под один файл не создавай.
-- Один класс на файл — только если так в проекте, а не по умолчанию.
-- Не разноси связанное по слоям ради симметрии. Если правка целиком укладывается
-  в один существующий файл, там она и остаётся.
+- A new file only when the entity is needed from more than one place, or when
+  the current file is already bigger than what is accepted in the project.
+- Don't create a new directory or package for a single file.
+- One class per file only if that is how the project does it, not by default.
+- Don't spread related things across layers for the sake of symmetry. If the
+  change fits entirely in one existing file, that is where it stays.
 
-Размер файла тоже повод для разделения, но по смыслу, а не механически. Когда
-UI-файл перерастает примерно 150 строк, посмотри, нет ли в нём самостоятельных
-частей экрана — шапки, строки сводки, баннера, — и вынеси каждую в свой файл в
-том же пакете фичи, назвав по тому, что она рисует. Приватная функция внизу
-файла остаётся правильным выбором для маленького помощника с одним
-потребителем, пока файл читается целиком; когда файл уже не помещается в
-голове, эти же помощники переезжают в соседние файлы того же пакета, а не в
-общие модули.
+File size is also a reason to split, but by meaning, not mechanically. When a
+UI file grows past roughly 150 lines, look at whether it contains independent
+parts of the screen (a header, a summary row, a banner) and move each into its
+own file in the same feature package, named after what it draws. A private
+function at the bottom of the file remains the right choice for a small helper
+with one consumer, as long as the file reads as a whole; when the file no longer
+fits in your head, those same helpers move to neighbouring files of the same
+package, not to shared modules.
 
-Повтор в две-три строки в двух местах одной фичи пиши на месте, а не выноси
-в отдельный файл-хелпер. Отдельный файл ради такого повтора заставляет читателя
-прыгать между файлами, а экономит две строки.
+A repetition of two or three lines in two places of one feature is written in
+place, not extracted into a separate helper file. A separate file for such a
+repetition makes the reader jump between files, and saves two lines.
 
-Место нового кода определяет число его реальных потребителей, а не то, насколько
-переиспользуемым он выглядит. Если виджет, функция или набор стилей нужны одной
-фиче, они живут рядом с ней: отдельным файлом в пакете этой фичи, а если
-потребитель один файл — приватной функцией внизу этого файла. Под одного
-потребителя не заводи новый Gradle-модуль, не клади код в общую папку
-компонентов и не добавляй токены в дизайн-систему или в core-расширения шрифтов
-и цветов. Общие модули и core-файлы читают и собирают все проекты и фичи,
-поэтому одноразовое содержимое там засоряет их для всех, а вынос наружу
-оправдан только тогда, когда второй потребитель уже есть в коде или назван в
-задаче.
+The place of new code is determined by the number of its real consumers, not by
+how reusable it looks. If a widget, a function or a set of styles is needed by
+one feature, they live next to it: as a separate file in that feature's package,
+and if the consumer is one file, as a private function at the bottom of that
+file. For a single consumer don't start a new Gradle module, don't put code in
+the shared components folder and don't add tokens to the design system or to
+the core extensions of fonts and colours. Shared modules and core files are read
+and built by all projects and features, so one-off content there clutters them
+for everyone, and moving something out is justified only when the second
+consumer already exists in the code or is named in the task.
 
-### Опора
+### Grounding
 
-Если у задачи есть официально документированный способ — lifecycle, threading,
-конфиг, публичный API — делай этим способом и назови источник. Когда способов
-несколько, выбирай документированный, а не самый короткий.
+If the task has an officially documented way (lifecycle, threading, config,
+public API), do it that way and name the source. When there are several ways,
+choose the documented one, not the shortest.
 
-Сила источников, по убыванию:
+Strength of sources, in descending order:
 
-1. официальная документация продукта или библиотеки;
-2. исходники самой библиотеки;
-3. release notes и issue tracker её мейнтейнеров;
-4. доклады и статьи авторов библиотеки;
-5. блоги и Stack Overflow.
+1. official documentation of the product or library;
+2. the sources of the library itself;
+3. release notes and the issue tracker of its maintainers;
+4. talks and articles by the library's authors;
+5. blogs and Stack Overflow.
 
-Пятый уровень — это подсказка, куда смотреть, а не обоснование. Копировать
-решение оттуда без сверки с первым или вторым уровнем запрещено.
+The fifth level is a hint about where to look, not a justification. Copying a
+solution from there without checking it against the first or second level is
+forbidden.
 
-### Если убеждения нет
+### When there is no conviction
 
-Не пиши код наугад и не выбирай вариант монеткой. Задай вопрос, и задай его
-конкретно: что именно неизвестно, какие варианты видишь, чем они различаются по
-последствиям — а не «как лучше сделать?».
+Don't write code at random and don't pick an option by coin toss. Ask a
+question, and ask it specifically: what exactly is unknown, which options you
+see, how they differ in consequences, rather than "what's the best way to do
+it?".
 
-Так же поступай, когда способов несколько и документация не выделяет ни одного:
-назови варианты с их последствиями и спроси, а не выбирай молча за меня.
+Do the same when there are several ways and the documentation singles out none
+of them: name the options with their consequences and ask, rather than silently
+choosing for me.
 
-Исключение составляют косметические мелочи, которые не меняют поведения и
-которые я не обсуждал: какой именно символ пробела, какое имя у приватной
-константы. Здесь бери самый простой вариант, назови его одной строкой в отчёте и
-не строй вокруг него анализ, потому что время, потраченное на разбор детали,
-которая мне не важна, уходит впустую.
+The exception is cosmetic trifles that don't change behaviour and that I haven't
+discussed: which exact whitespace character, what name a private constant has.
+Here take the simplest option, name it in one line in the report and don't build
+an analysis around it, because time spent analysing a detail that doesn't
+matter to me is wasted.
 
-### Минимальный дифф
+### Minimal diff
 
-Меняй только то, что требует задача. Попутный рефакторинг, переименование,
-переформатирование и «раз уж я здесь» запрещены, потому что они смешивают в
-одном коммите две разные причины изменения, а значит потом нельзя откатить одну,
-не откатив вторую.
+Change only what the task requires. Incidental refactoring, renaming,
+reformatting and "while I'm here" are forbidden, because they mix two different
+reasons for change into one commit, which means later one can't be reverted
+without reverting the other.
 
-Существующие элементы интерфейса — иконки, подписи, кнопки, отступы — не удаляй и
-не упрощай, пока не попросили прямо. То, что выглядит лишним, обычно поставлено
-осознанно, и его исчезновение заметит не ревьюер, а пользователь.
+Existing interface elements (icons, captions, buttons, spacing) are not removed
+or simplified until explicitly asked. What looks superfluous is usually placed
+deliberately, and its disappearance will be noticed not by the reviewer but by
+the user.
 
-Если по дороге увидел настоящую поломку рядом, назови её одной строкой в отчёте и
-оставь на отдельную задачу.
+If along the way you saw a real breakage nearby, name it in one line in the
+report and leave it for a separate task.
 
-### Синхронный проход
+### Synchronous pass
 
-Правка сигнатуры — это не правка одного файла. Меняя параметры конструктора или
-функции, в том же проходе синхронизируй все места вызова, DI-модуль, где объект
-собирается, стабы и фейки, тестовые фикстуры. Причина в том, что компилятор
-поймает не всё: рефлексивный DI и тестовые дубли он не проверяет, поэтому
-рассинхрон всплывёт в рантайме уже после ревью.
+A signature change is not a change of one file. When changing the parameters of
+a constructor or function, in the same pass synchronise all call sites, the DI
+module where the object is assembled, stubs and fakes, test fixtures. The reason
+is that the compiler won't catch everything: it doesn't check reflective DI and
+test doubles, so the mismatch will surface at runtime, already after review.
 
-То же касается правки поведения без смены сигнатуры. Прежде чем поменять, что
-возвращает функция, перечисли всех, кто читает её результат, включая поля
-модели, которые она заполняет, а не только места её вызова. Одна и та же функция
-форматирования часто кормит несколько полей, и если проверить только то, ради
-которого её меняешь, остальные молча начнут показывать другое.
+The same applies to a behaviour change without a signature change. Before
+changing what a function returns, list everyone who reads its result, including
+the model fields it fills, not only the places it is called. One and the same
+formatting function often feeds several fields, and if you check only the one
+you are changing it for, the others will silently start showing something
+different.
 
-Перед тем как сказать «готово», перечитай изменённые места и убедись, что
-сигнатуры, DI и call sites сошлись.
+Before saying "done", re-read the changed places and make sure that signatures,
+DI and call sites agree. Remove only the orphans your own change left behind:
+unused imports, variables and functions that nothing references any more.
+Dead code that was already there stays and is named in the report. A temporary
+debug log gets a unique prefix such as `[DEBUG-a4f2]`, and before the report you
+`grep` for the prefix until nothing is left.
 
-### Перенос в другой хост — это смена контракта, а не только вёрстки
+### Moving to another host is a change of contract, not only of layout
 
-Когда правка переносит готовые компоненты в другой контейнер — другой
-`ComposeView`, fragment или Activity, другой `UIHostingController`, общий
-скролл вместо отдельного, новый сосед сверху или снизу в той же композиции, —
-меняется не только то, как экран выглядит, но и то, на что эти компоненты
-молча опираются. Скриншот этого не покажет, потому что статичная картинка
-совпадает, а ломается поведение: скролл к ошибке, работа клавиатуры, отступы от
-системных панелей, back, фокус.
+When a change moves ready components into another container (another
+`ComposeView`, fragment or Activity, another `UIHostingController`, a shared
+scroll instead of a separate one, a new neighbour above or below in the same
+composition), what changes is not only how the screen looks, but also what
+these components silently rely on. A screenshot won't show this, because the
+static picture matches, while behaviour breaks: scroll to the error, keyboard
+handling, insets from the system bars, back, focus.
 
-Поэтому в плане такой правки обязателен отдельный пункт «контракт хоста», и
-заполняется он до кода:
+Therefore the plan for such a change must have a separate item "host contract",
+and it is filled in before the code:
 
-1. Прочитай исходники каждого встраиваемого компонента, включая компоненты общей
-   библиотеки, а не только их сигнатуры. Ищи то, что зависит от хоста:
-   `positionInRoot` / `positionInWindow` / `onGloballyPositioned`,
-   `animateScrollBy` / `scrollTo` по вычисленному смещению, `WindowInsets` и
+1. Read the sources of every embedded component, including components of the
+   shared library, not only their signatures. Look for what depends on the
+   host: `positionInRoot` / `positionInWindow` / `onGloballyPositioned`,
+   `animateScrollBy` / `scrollTo` by a computed offset, `WindowInsets` and
    `imePadding`, `LocalView`, `BackHandler`, `navigationController`,
-   `navigationBar.isHidden`, размеры экрана. Параметр вроде
-   `scrollState: ScrollableState` в сигнатуре — сигнал, что компонент сам
-   управляет чужим скроллом и считает координаты.
-2. Для каждого найденного места запиши, какое допущение о хосте оно делает
-   («верх композиции совпадает с верхом списка», «на экран один hosting
-   controller», «хост сам даёт отступ от панели»), и выполняется ли это
-   допущение в новом хосте.
-3. Составь по каждому экрану список поведения на master, а не только внешнего
-   вида: что происходит при ошибке валидации, при открытии и закрытии
-   клавиатуры, при back, при повторном входе, при длинном контенте на узком
-   экране. Каждый пункт этого списка — отдельная проверка после правки.
-4. Если допущение ломается, это входит в объём задачи и в план, а не
-   обнаруживается тестировщиком. Сломанное текущее поведение — такой же
-   дефект, как неработающая новая функция.
+   `navigationBar.isHidden`, screen dimensions. A parameter like
+   `scrollState: ScrollableState` in the signature is a signal that the
+   component itself controls someone else's scroll and computes coordinates.
+2. For each place found, write down what assumption about the host it makes
+   ("the top of the composition coincides with the top of the list", "one
+   hosting controller per screen", "the host itself provides the inset from the
+   bar"), and whether that assumption holds in the new host.
+3. For each screen, compile a list of behaviour on master, not only of
+   appearance: what happens on a validation error, when the keyboard opens and
+   closes, on back, on re-entry, with long content on a narrow screen. Each
+   item of this list is a separate check after the change.
+4. If an assumption breaks, that is part of the task's scope and of the plan,
+   not something to be discovered by the tester. Broken current behaviour is
+   the same kind of defect as a non-working new function.
 
-Если прочитать исходник встраиваемого компонента нельзя, так и напиши в плане,
-и считай его поведение в новом хосте непроверенным.
+If the source of an embedded component cannot be read, write that in the plan,
+and consider its behaviour in the new host unverified.
 
-### Коммиты и PR
+### Commits and PRs
 
-- Перед созданием PR прочитай командные правила репозитория (например,
-  `.claude/commands/pr.md`) и выполни их целиком: формат ветки и заголовка,
-  обязательные ревьюеры, assignee, лейблы, milestone. Хук, который ловит
-  пропущенных ревьюеров, — это страховка, а не способ узнать правило.
-- Не делай `--amend` и force-push, пока я прямо не попросил. Исправление после
-  коммита оформляй новым коммитом.
-- Длину заголовка коммита (обычно до 72 символов) проверяй до `git commit`, а не
-  после push, потому что запушенный заголовок без `--amend` уже не исправить.
-- Перед push посмотри `git show --stat HEAD`. Pre-commit хуки вроде `env-reset`
-  делают `git add -u` и подмешивают локальные файлы окружения, а ранний `git rm`
-  уезжает в следующий коммит, и всё это потом приходится откатывать отдельными
-  коммитами.
+- Before creating a PR, read the repository's team rules (for example,
+  `.claude/commands/pr.md`) and follow them in full: branch and title format,
+  mandatory reviewers, assignee, labels, milestone. The hook that catches
+  missed reviewers is a safety net, not a way to learn the rule.
+- Don't do `--amend` and force-push until I explicitly ask. A fix after a
+  commit is made as a new commit.
+- Check the commit title length (usually up to 72 characters) before
+  `git commit`, not after push, because a pushed title can no longer be fixed
+  without `--amend`.
+- Before push, look at `git show --stat HEAD`. Pre-commit hooks like
+  `env-reset` do `git add -u` and mix in local environment files, and an early
+  `git rm` slides into the next commit, and all of that later has to be
+  reverted with separate commits.
 
-### Тяжёлые сборки
+### Heavy builds
 
-Не запускай полные сборки и длинные прогоны тестов без явной просьбы — я обычно
-проверяю сборку сам, а твой прогон занимает минуты и ничего не добавляет.
-Запускай точечное: конкретный тест-класс, линтер по изменённым файлам. Если
-убедиться в правке можно только полной сборкой, скажи это и спроси.
+Don't run full builds and long test runs without an explicit request; I usually
+check the build myself, and your run takes minutes and adds nothing. Run
+targeted things: a specific test class, the linter over the changed files. If
+the change can be verified only by a full build, say so and ask.
 
-Отказ от сборки не отменяет обязательного пункта про факт проверки: тогда прямо
-напиши, что сборкой не проверял и почему.
+Declining the build doesn't cancel the mandatory item about the fact of
+verification: then write plainly that you didn't verify with a build and why.
 
-### Когда уверенности нет — три плана
+### Context economy
 
-Если уверенность ниже примерно 90% относительно документации проекта, его стиля и
-существующих паттернов, не изобретай подход. Предложи не меньше трёх коротких
-планов с последствиями каждого и дождись выбора, потому что новый подход, не
-совпавший с принятым в проекте, я всё равно выкину, и время уйдёт впустую.
+Tokens spent on noise are tokens not spent on the task, so keep the main
+context for decisions and push the noise out of it:
+
+- Delegate verbose work to a subagent and take back only its conclusion: test
+  runs, log processing, wide code searches, reading documentation. The
+  question that decides it is "will I need this output again, or only the
+  conclusion?".
+- Filter command output before it reaches the context: `tail`, `grep`, `--stat`,
+  `--oneline`. A 10,000-line log is read through `grep` for the error, not
+  whole.
+- Read big files by line range, not end to end. Open the whole file only when
+  the task is about the whole file.
+- A subagent's "done" is not a result. Before it goes into the report, check
+  the diff yourself (`git diff`) and every finding by `file:line`; a finding you
+  did not confirm is reported as unverified.
+- Before `/clear` or a new session on the same task, write a short handoff
+  note into the scratchpad: what is done, where the plan and the branch are,
+  what to verify next, which skills to load. Reference files by path instead of
+  copying them, and keep secrets out of it.
+
+### When there is no confidence: three plans
+
+If confidence is below roughly 90% regarding the project's documentation, its
+style and existing patterns, don't invent an approach. Propose at least three
+short plans with the consequences of each and wait for the choice, because a
+new approach that doesn't match what the project has adopted I will throw away
+anyway, and the time will be wasted.

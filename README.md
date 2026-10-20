@@ -14,8 +14,8 @@ Compose Multiplatform and SwiftUI. Most of it is stack-agnostic: how to answer,
 when to edit code and when to ask, how to measure confidence before a bug fix, how
 to keep a diff minimal.
 
-> The rules themselves are in Russian. The agent prompts, installer and this README
-> are in English.
+> The rules are in English. The first rule tells Claude to answer in Russian;
+> change that one line if you want another language.
 
 ## Why
 
@@ -43,6 +43,12 @@ with the decision you need to make.
   these rules. Every finding is confirmed with `file:line` and a quoted line.
 - **Self-healing install.** Git hooks and a `SessionStart` hook keep the copy in
   `~/.claude/CLAUDE.md` in sync with the repo, so a stale rule never loads.
+- **Context economy.** Stack-specific rules are path-scoped and load only when a
+  matching file is read; verbose work goes to subagents; command output is
+  filtered before it enters the context.
+- **Verification that cannot lie.** A regression test is shown red without the
+  fix and green with it; a failing test is never weakened; a subagent's "done"
+  is re-checked by `git diff` before it reaches the report.
 
 ## Quick start
 
@@ -127,17 +133,19 @@ Two safeguards keep the copy fresh:
 | `claude/hooks/` | Hooks → `~/.claude/hooks/`; `egor-ai-rules-sync.sh` is registered as `SessionStart` |
 | `githooks/` | Repo git hooks |
 
-| Rule file | When it applies |
-|---|---|
-| `10-communication-style` | Always: language, length, clarity, sourcing, reports |
-| `20-crash-fix-confidence` | When investigating a crash or a bug |
-| `30-implementation` | When writing any code |
-| `40-kmp-mobile` | In KMP repos: coroutines, state, DI, Compose, SwiftUI |
-| `45-mobile-feature-delivery` | Same repos, when building a feature from a spec and Figma |
+| Rule file | Loaded | When it applies |
+|---|---|---|
+| `10-communication-style` | always | Language, length, clarity, sourcing, reports |
+| `20-crash-fix-confidence` | always | Investigating a crash or a bug |
+| `30-implementation` | always | Writing any code; context economy |
+| `40-kmp-mobile` | on `*.kt`, `*.kts`, `*.swift` | Coroutines, state, DI, Compose, SwiftUI |
+| `45-mobile-feature-delivery` | on `*.kt`, `*.kts`, `*.swift` | Building a feature from a spec and Figma |
 
-Everything sits in one always-loaded block. That costs more tokens than
-path-scoped rules, but a rule like "no bug fix below 93% confidence" is useless
-if it might not be loaded.
+Rules that must never be missing (the 93% confidence gate, the answer format)
+sit in the always-loaded block. Stack-specific rules start with a `paths:`
+frontmatter and are installed as
+[path-scoped rules](https://code.claude.com/docs/en/memory#path-specific-rules)
+into `~/.claude/rules/`, so they cost nothing until Claude reads a matching file.
 
 ## Make it yours
 
@@ -149,6 +157,8 @@ if it might not be loaded.
    it executes "answers are at most five lines". Give a before / after example for
    anything non-obvious.
 4. The placeholder `{{REPO_ROOT}}` inside a rule expands to the checkout path.
+   A rule that starts with YAML frontmatter containing `paths:` becomes
+   path-scoped instead of joining the always-loaded block.
 5. Run `./install.sh` and open a new session.
 
 Installer commands:

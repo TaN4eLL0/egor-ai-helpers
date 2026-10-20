@@ -1,160 +1,177 @@
-## Фича по спеке и Figma (мобильные репозитории)
+---
+paths:
+  - "**/*.kt"
+  - "**/*.kts"
+  - "**/*.swift"
+---
 
-Секция действует в тех же репозиториях, что и «Мобильный стек»: CRDES, MMES, MMMX,
-`kmp-common-components`, `idf-kmm-core`. Она собрана из правок, которые я вносил
-после реализации CRDES-46599 (MCR-баннеры, top-up, экраны PA-MCR). Каждая из них
-стоила отдельного круга «сделал → показал → переделал», поэтому выполняй пункты
-до первого показа, а не после замечания.
+## Feature from a spec and Figma (mobile repositories)
 
-### До первой строки кода
+This section applies in the same repositories as "Mobile stack": CRDES, MMES, MMMX,
+`kmp-common-components`, `idf-kmm-core`. It is assembled from the corrections I
+made after implementing CRDES-46599 (MCR banners, top-up, PA-MCR screens). Each of
+them cost a separate round of "did it → showed it → redid it", so do these items
+before the first demo, not after a remark.
 
-1. Прочитай строки спеки по ID экрана целиком: тексты, кнопки, переходы и раздел
-   аналитики. Если объём в Jira шире или уже, чем в строке спеки (например, Jira
-   пишет «redesign», а строка меняет одно число), спроси до правки, потому что
-   переделка по более широкому прочтению потом откатывается целиком.
-2. Открой узел Figma каждого варианта экрана и компонента. Если Figma не
-   открывается, проверь все пути — MCP и `figma_client.py` — и только потом
-   говори «недоступно». Значения без макета не угадывай, а спроси.
-3. Прочитай регламент `kmp-common-components/docs/regulations/` по слоям, которые
-   трогаешь, до кода, а не после: сверка постфактум в CRDES-46599 нашла
-   нарушения сразу в десяти правилах.
-4. Пройди flow API-запросами под тестовым пользователем: GET шага, POST выбора,
-   GET после него. Посмотри реальные `step`, `data`, `routes`, `stepBack` и
-   redirect'ы. Код пиши по ответу стенда, а не по описанию контракта, потому что
-   именно этот прогон вскрывает захардкоженные имена flow и одноразовые redirect'ы.
+### Before the first line of code
 
-### Вёрстка по Figma
+1. Read the spec rows for the screen ID in full: texts, buttons, transitions and
+   the analytics section. If the scope in Jira is wider or narrower than in the
+   spec row (for example, Jira says "redesign" while the row changes one number),
+   ask before editing, because a rework based on the wider reading is later
+   rolled back entirely.
+2. Open the Figma node of every variant of the screen and component. If Figma
+   does not open, check every path — MCP and `figma_client.py` — and only then
+   say "unavailable". Do not guess values without the mockup; ask instead.
+3. Read the regulations in `kmp-common-components/docs/regulations/` for the
+   layers you touch before the code, not after: the after-the-fact check in
+   CRDES-46599 found violations of ten rules at once.
+4. Walk the flow with API requests under a test user: GET of the step, POST of
+   the choice, GET after it. Look at the real `step`, `data`, `routes`, `stepBack`
+   and redirects. Write the code against the stand's response, not against the
+   contract description, because it is exactly this walkthrough that exposes
+   hardcoded flow names and one-time redirects.
 
-- Каждый вариант компонента сверяй с его собственным узлом поэлементно: иконка,
-  радиус, заливка и её opacity, стиль текста, отступы. Вариант, унаследованный от
-  соседнего (серый баннер → фиолетовый), не считается сверенным, потому что у
-  нового варианта в макете может не быть иконки или быть другой радиус.
-- Цвет и opacity бери из конкретного слоя (variable + процент), а не из старых
-  дампов и не «похожий токен». Было: перебрал `#F0E5F7`, затем
-  `secondaryContainer`. Стало: в слое стоит Secondary Vivid 8%.
-- Видимый зазор — это сумма всех источников: отступ карточки, верхний отступ
-  нижнего блока, внутренний padding соседа. С Figma сравнивай сумму. Было:
-  поставил `top = 20`, а на экране вышло 36, потому что 16 уже давала карточка.
-  Стало: `top = 4`, и 16 + 4 = 20.
-- Зазоры вокруг реализуемого блока входят в задачу, даже если физически стоят на
-  соседе (например, `margin` у поля ввода суммы над баннером). Это не «поломка
-  рядом», а часть экрана, который ты делаешь.
-- Интеракции и анимации из макета (prototype, заметки дизайнера) — часть дизайна,
-  а не опция. Составной элемент (кнопка с бейджем) анимируется целиком. В Compose
-  `graphicsLayer { alpha < 1 }` рендерит слой в offscreen-буфер по его границам и
-  обрезает выступающих детей, поэтому alpha вешай на узел, который включает бейдж,
-  и проверяй кадр нажатия на устройстве.
-- Правка вёрстки по умолчанию делается на обеих платформах — Compose и SwiftUI — и
-  проверяется парой. Если правка касается только одной платформы, скажи это прямо.
+### Layout from Figma
 
-### Токены и цвета
+- Check every component variant against its own node element by element: icon,
+  radius, fill and its opacity, text style, paddings. A variant inherited from a
+  neighbouring one (grey banner → purple) does not count as checked, because the
+  new variant in the mockup may have no icon or may have a different radius.
+- Take colour and opacity from the specific layer (variable + percentage), not
+  from old dumps and not a "similar token". Before: tried `#F0E5F7`, then
+  `secondaryContainer`. After: the layer has Secondary Vivid 8%.
+- The visible gap is the sum of all sources: the card's padding, the top padding
+  of the lower block, the inner padding of the neighbour. Compare the sum with
+  Figma. Before: set `top = 20`, but the screen showed 36, because the card was
+  already giving 16. After: `top = 4`, and 16 + 4 = 20.
+- Gaps around the block being implemented are part of the task, even if they
+  physically sit on a neighbour (for example, the `margin` of the amount input
+  field above the banner). This is not a "breakage nearby" but part of the screen
+  you are building.
+- Interactions and animations from the mockup (prototype, designer's notes) are
+  part of the design, not an option. A composite element (a button with a badge)
+  animates as a whole. In Compose `graphicsLayer { alpha < 1 }` renders the layer
+  into an offscreen buffer by its bounds and clips children that stick out, so
+  put alpha on the node that includes the badge, and check the press frame on a
+  device.
+- A layout change is made on both platforms by default — Compose and SwiftUI —
+  and is checked as a pair. If the change concerns only one platform, say so
+  explicitly.
 
-- Новый цвет под один экран не заводится ни литералом, ни extension'ом вроде
-  `ColorScheme.secondaryVivid`. Найди свободный слот M3 (`primaryFixed`,
-  `tertiary` и т. п.), согласуй его со мной и поменяй сразу в трёх местах: Compose
-  `Colors.kt`, iOS `Colors.xcassets`, Flutter `AppColor`. Старых читателей слота
-  перенеси в том же проходе, иначе их цвет молча поменяется.
-- Выделение части текста делай ближайшим существующим токеном (`bodyMedium` и
-  `labelLarge`), а не самодельным весом поверх стиля.
+### Tokens and colours
 
-### Ассеты
+- A new colour for a single screen is not introduced either as a literal or as an
+  extension like `ColorScheme.secondaryVivid`. Find a free M3 slot (`primaryFixed`,
+  `tertiary`, etc.), agree it with me and change it in three places at once:
+  Compose `Colors.kt`, iOS `Colors.xcassets`, Flutter `AppColor`. Move the old
+  readers of the slot in the same pass, otherwise their colour silently changes.
 
-- Экспортируй сам узел картинки вместе с эффектами (blur, тени), а не кроп рендера
-  экрана: кроп срезает края и теряет размытый фон.
-- Формат бери как у соседних ассетов этой платформы: в KMP `webp`, на iOS — то, что
-  уже лежит в этом каталоге (`png` 1x/2x/3x или `pdf`). Конвертируй до добавления в
-  проект.
-- После добавления сверь картинку 1:1 с Figma на устройстве: края, фон, резкость.
-- Визуальный дефект, о котором я говорю, не опровергай своим скриншотом.
-  Воспроизведи его в моих условиях (устройство, плотность, тема) и чини.
+### Assets
 
-### Step engine и контракт backend
+- Export the image node itself together with its effects (blur, shadows), not a
+  crop of the screen render: a crop cuts the edges and loses the blurred
+  background.
+- Take the format from the neighbouring assets of that platform: in KMP `webp`,
+  on iOS whatever already lies in that catalog (`png` 1x/2x/3x or `pdf`). Convert
+  before adding to the project.
+- After adding, compare the image 1:1 with Figma on a device: edges, background,
+  sharpness.
+- Do not refute a visual defect I am talking about with your own screenshot.
+  Reproduce it under my conditions (device, density, theme) and fix it.
 
-- Один экран спеки — свой компонент. Общий код заводи, только если экраны
-  совпадают почти полностью; иначе получается один компонент с `if` по состоянию,
-  который меняют сразу три экрана.
-- Стандартная кнопка шага — `DefaultContinueSubComponent`, как в шагах PA-PT и
-  BNPL, а не своя кнопка, которая сама навигирует.
-- Состояние, которое отдаёт контракт (доступность действия, дата, текст), не
-  хардкодь, даже временно. Тексты, которые присылает backend (`params.message`,
-  `params.message2`), бери из params, а не из локальных строк.
-- После POST в flow делай GET того же flow, как это делает step engine. Без GET
-  одноразовый redirect backend остаётся висеть и срабатывает на следующем входе.
-- Результат шага отправляй в тот flow, из которого пришёл шаг. Поведение
-  закрытия, back и «Ahora no» проверяй отдельно для каждой точки входа на экран:
-  один и тот же top-up из баннера и из PA-MCR-2.1 должен вести себя по-разному.
-- Частный случай одного flow не встраивай `if (flowName == X)` в общую функцию
-  навигации — передай отдельный callback или параметр.
-- Форматтер с паттерном и `Locale` (`DecimalFormat`, `DateTimeFormat`) приходит
-  через конструктор из DI и назван по назначению (`limitFormat`, `retryDateFormat`),
-  а не создаётся внутри компонента.
-- `requireNotNull(x)` и `checkNotNull(x)` всегда с сообщением:
+### Step engine and backend contract
+
+- One spec screen — its own component. Introduce shared code only if the screens
+  match almost entirely; otherwise you get one component with an `if` on state
+  that three screens change at once.
+- The standard step button is `DefaultContinueSubComponent`, as in the PA-PT and
+  BNPL steps, not your own button that navigates by itself.
+- Do not hardcode state that the contract returns (action availability, date,
+  text), even temporarily. Texts that the backend sends (`params.message`,
+  `params.message2`) are taken from params, not from local strings.
+- After a POST to a flow, do a GET of the same flow, as the step engine does.
+  Without the GET the backend's one-time redirect stays hanging and fires on the
+  next entry.
+- Send the step result to the flow the step came from. Check the behaviour of
+  close, back and "Ahora no" separately for every entry point to the screen: the
+  same top-up from the banner and from PA-MCR-2.1 must behave differently.
+- Do not embed a special case of one flow as `if (flowName == X)` in the shared
+  navigation function — pass a separate callback or parameter.
+- A formatter with a pattern and `Locale` (`DecimalFormat`, `DateTimeFormat`)
+  comes through the constructor from DI and is named by its purpose
+  (`limitFormat`, `retryDateFormat`), not created inside the component.
+- `requireNotNull(x)` and `checkNotNull(x)` always with a message:
   `requireNotNull(stepDataEnricher) { "stepDataEnricher must be set before select()" }`.
 
-### Аналитика
+### Analytics
 
-Если спека требует событий в DWH или `user_behavior_events` («all CTAs and back
-actions»), до кода составь таблицу «ID элемента спеки → имя события» по всем CTA и
-по всем путям back: стрелка toolbar, системный back Android, swipe на iOS. Сделай
-события в том же проходе, что и экран, а таблицу положи в описание PR и дай на
-неё ссылку в отчёте, потому что в пять строк отчёта она не помещается. Отложенная
-«на потом» аналитика всплывает только тогда, когда её начинают искать в DWH.
+If the spec requires events in DWH or `user_behavior_events` ("all CTAs and back
+actions"), before the code build a table "spec element ID → event name" for all
+CTAs and all back paths: the toolbar arrow, Android system back, swipe on iOS.
+Make the events in the same pass as the screen, put the table in the PR
+description and link to it in the report, because it does not fit in the five
+lines of the report. Analytics postponed "for later" surfaces only when someone
+starts looking for it in DWH.
 
 ### SwiftUI
 
-- `foregroundStyle`, а не `foregroundColor`: в SDK он помечен `renamed:
-  "foregroundStyle(_:)"`. Исключение одно — склейка `Text + Text` при target ниже
-  iOS 17. Там нужен `Text.foregroundColor`, потому что `foregroundStyle`,
-  возвращающий `Text`, появился только в iOS 17.
-- Цвет-ассет передавай implicit member: `.background(.onPrimary)`, а не
-  `Color.onPrimary` и не `Color(.onPrimary)`. Осторожно с `.primary`, `.secondary`
-  и `.tertiary`: эти имена совпадают с `HierarchicalShapeStyle` и без явного типа
-  разрешатся в системный стиль.
-- Картинки грузи через asset symbols: `Image(.imgMcrInitial)`, а не
+- `foregroundStyle`, not `foregroundColor`: in the SDK it is marked `renamed:
+  "foregroundStyle(_:)"`. There is one exception — the `Text + Text`
+  concatenation with a target below iOS 17. There `Text.foregroundColor` is
+  needed, because `foregroundStyle` returning `Text` appeared only in iOS 17.
+- Pass a colour asset as an implicit member: `.background(.onPrimary)`, not
+  `Color.onPrimary` and not `Color(.onPrimary)`. Be careful with `.primary`,
+  `.secondary` and `.tertiary`: these names coincide with
+  `HierarchicalShapeStyle` and without an explicit type resolve to the system
+  style.
+- Load images through asset symbols: `Image(.imgMcrInitial)`, not
   `Image("img_mcr_initial")`.
-- Ключ строки передавай литералом: `Text("key", tableName: "Table")`, а не
-  `Text(LocalizedStringKey("key"), ...)`. Параметр компонента, который принимает
-  ключ, типизируй `LocalizedStringKey`, а не `String`.
+- Pass the string key as a literal: `Text("key", tableName: "Table")`, not
+  `Text(LocalizedStringKey("key"), ...)`. Type a component parameter that takes
+  a key as `LocalizedStringKey`, not `String`.
 
 ### Gradle
 
-Перед правкой `build.gradle.kts` модуля прочитай его convention plugin
-(`plazo.kmp.compose` и подобные) и не объявляй зависимости, которые он уже
-приносит. Зависимость, которая выглядит неиспользуемой по `grep`, удаляй только
-после того, как модуль без неё скомпилировался.
+Before editing a module's `build.gradle.kts`, read its convention plugin
+(`plazo.kmp.compose` and the like) and do not declare dependencies it already
+brings. Remove a dependency that looks unused by `grep` only after the module
+has compiled without it.
 
-### Строки
+### Strings
 
-Текст бери дословно из строки спеки. Ключ один и тот же на KMP и iOS, а переносы
-строк стоят в одних и тех же местах на обеих платформах.
+Take the text verbatim from the spec row. The key is the same on KMP and iOS, and
+the line breaks are in the same places on both platforms.
 
-### Проверка на стенде и устройстве
+### Checking on the stand and the device
 
-- Перед входом в приложение и перед любым выводом о backend проверь, на какой хост
-  ходит сборка: строку `Using baseUrl` и лог запросов, отдельно на каждой
-  платформе. Debug-настройки хоста переживают переустановку, поэтому «собрал под
-  стенд» ещё не значит «ходит на стенд».
-- Тестового пользователя генерируй сразу в целевом состоянии. Сначала посмотри
-  опции сценариев (`view/scenarios`), а потом уже говори, что так нельзя. До
-  передачи мне проверь состояние API-запросом: баннеры, текущий шаг. Если
-  генератор падает на интеграции, предложи stub в Environment Control. Это
-  меняет весь стенд для всех, поэтому включай только с моего согласия.
-- Stub ставь ровно на тот экран, который я проверяю, и уточни экран, если не
-  уверен. Пока stub в сборке, каждый отчёт начинается с пометки о нём. Убрав stub
-  из кода, в том же шаге пересобери и переставь сборку, иначе на устройстве
-  останется старый stub, и я увижу дубли.
-- Не трогай устройство и эмулятор, пока на нём работаю я. Если не уверен, свободно
-  ли оно, спроси.
-- Опрос backend дольше пяти минут без изменений не держи: остановись, скажи, что
-  видишь, и спроси, ждать ли дальше.
-- Перед показом сам сверь экраны с Figma и пару iOS ↔ Compose, не дожидаясь, пока
-  я пришлю скриншот с расхождением.
+- Before entering the app and before any conclusion about the backend, check
+  which host the build goes to: the `Using baseUrl` line and the request log,
+  separately on each platform. Debug host settings survive a reinstall, so
+  "built for the stand" does not yet mean "goes to the stand".
+- Generate the test user directly in the target state. First look at the
+  scenario options (`view/scenarios`), and only then say it cannot be done.
+  Before handing over to me, check the state with an API request: banners, the
+  current step. If the generator fails on an integration, propose a stub in
+  Environment Control. That changes the whole stand for everyone, so enable it
+  only with my consent.
+- Put the stub on exactly the screen I am checking, and clarify the screen if
+  unsure. While the stub is in the build, every report starts with a note about
+  it. Having removed the stub from the code, rebuild and reinstall the build in
+  the same step, otherwise the old stub remains on the device and I will see
+  duplicates.
+- Do not touch the device or the emulator while I am working on it. If unsure
+  whether it is free, ask.
+- Do not keep polling the backend for longer than five minutes without changes:
+  stop, say what you see, and ask whether to keep waiting.
+- Before the demo, compare the screens with Figma and the iOS ↔ Compose pair
+  yourself, without waiting for me to send a screenshot with a discrepancy.
 
-### PR и ревью
+### PR and review
 
-- После каждой пачки коммитов в открытый PR обнови его описание: чеклист,
-  проверку, Figma-ссылки и скриншоты, как требует регламент.
-- На каждый комментарий ревью отвечай коротко: «Fixed in <sha>» или одной фразой,
-  почему нет. Валидные замечания чини.
-- Находки subagent'ов и ревью-ботов перед передачей мне проверяй сам по file:line.
-  Находку, которую не подтвердил, называй непроверенной.
+- After every batch of commits to an open PR, update its description: checklist,
+  verification, Figma links and screenshots, as the regulations require.
+- Reply to every review comment briefly: "Fixed in <sha>" or one phrase on why
+  not. Fix valid remarks.
+- Check the findings of subagents and review bots yourself by file:line before
+  passing them to me. Call a finding you did not confirm unverified.
