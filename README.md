@@ -1,74 +1,104 @@
 # egor-ai-helpers
 
-Набор правил и агент ревью для [Claude Code](https://code.claude.com/docs). Одна
-команда ставит их в `~/.claude/`, и они действуют в каждой сессии и в каждом
-проекте на машине.
+[![Claude Code](https://img.shields.io/badge/Claude_Code-rules_%2B_agents-blueviolet)](https://code.claude.com/docs)
+[![Shell](https://img.shields.io/badge/installer-bash-4EAA25?logo=gnubash&logoColor=white)](install.sh)
+[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg)](#contributing)
 
-Правила написаны для senior mobile-разработчика на Kotlin Multiplatform, Decompose,
-Compose Multiplatform и SwiftUI, но большая часть не привязана к стеку: как
-отвечать, когда править код, а когда спрашивать, как считать уверенность перед
-фиксом бага, как писать минимальный дифф.
+Opinionated rules and a read-only review agent for [Claude Code](https://code.claude.com/docs).
+One command installs them into `~/.claude/`, and they apply in every session and
+every project on the machine.
 
-## Что это даёт
+Written for a senior mobile engineer working with Kotlin Multiplatform, Decompose,
+Compose Multiplatform and SwiftUI. Most of it is stack-agnostic: how to answer,
+when to edit code and when to ask, how to measure confidence before a bug fix, how
+to keep a diff minimal.
 
-- **Короткие ответы с решением в конце.** Пять строк, вердикт первым, без
-  пересказа того, что видно в терминале. Объяснение по запросу — связный текст, а
-  не список.
-- **Факты вместо догадок.** Каждое утверждение помечено источником: документация,
-  код, вывод команды или «по памяти, не проверял». Версии, имена флагов и API
-  проверяются всегда.
-- **Порог уверенности перед фиксом бага.** Правка применяется только при 93%+, и
-  процент собирается из пяти проверяемых пунктов, а не называется на глаз.
-- **Минимальный дифф и стиль проекта.** Никакого попутного рефакторинга,
-  комментариев в коде и абстракций «на будущее». Соседний файл проекта важнее
-  официального примера.
-- **Мобильный baseline.** Корутины, `Value`, DI, навигация Decompose, отступы и
-  стили в Compose и SwiftUI, паритет iOS и локализации. Пункты, подтверждённые
-  официальной документацией, ссылаются на неё.
-- **Агент `egor-review`.** Read-only ревью своего диффа или чужого PR по этим
-  правилам. Каждая находка подтверждена `file:line` и цитатой.
+> The rules themselves are in Russian. The agent prompts, installer and this README
+> are in English.
 
-## Установка
+## Why
 
-Нужны `git`, `bash`, `python3` и установленный Claude Code.
+Default assistant behaviour optimises for sounding helpful: long answers, confident
+guesses, "fixes" that silence a symptom, refactors nobody asked for. These rules
+optimise for the opposite: every claim has a source, every bug fix has a measured
+confidence, every diff is the smallest one that does the job, and the answer ends
+with the decision you need to make.
+
+## Features
+
+- **Five-line answers, decision last.** Verdict first, no retelling of what is
+  already visible in the terminal. Explanations on request are prose, not bullets.
+- **Facts over guesses.** Every statement carries its source: docs, code, command
+  output, or an explicit "from memory, not verified". Versions, flag names and
+  API names are always checked.
+- **Confidence gate for bug fixes.** A fix is applied only at 93%+ confidence, and
+  the number is built from five verifiable items, never eyeballed.
+- **Minimal diff, project style first.** No drive-by refactors, no code comments,
+  no abstractions "for later". A neighbouring file beats the official sample.
+- **Mobile baseline.** Coroutines, `Value`, DI, Decompose navigation, spacing and
+  text styles in Compose and SwiftUI, iOS and localisation parity. Items backed
+  by official docs cite them.
+- **`egor-review` agent.** Read-only review of your own diff or a team PR against
+  these rules. Every finding is confirmed with `file:line` and a quoted line.
+- **Self-healing install.** Git hooks and a `SessionStart` hook keep the copy in
+  `~/.claude/CLAUDE.md` in sync with the repo, so a stale rule never loads.
+
+## Quick start
+
+Requires `git`, `bash`, `python3` and Claude Code.
 
 ```bash
 git clone https://github.com/TaN4eLL0/egor-ai-helpers.git ~/egor-ai-helpers && cd ~/egor-ai-helpers && ./install.sh
 ```
 
-Правила подхватываются в **новой** сессии, потому что текущая уже загрузила
-контекст.
+Rules load in a **new** session; the current one already has its context.
 
-Обновление:
+Update:
 
 ```bash
 cd ~/egor-ai-helpers && git pull
 ```
 
-После `pull` git hook сам перезапускает installer, поэтому отдельной команды не
-нужно.
+A git hook re-runs the installer after `pull`, so there is no second step.
 
-Удаление:
+Uninstall:
 
 ```bash
 ~/egor-ai-helpers/install.sh --uninstall
 ```
 
-## Использование
+## Usage
 
-Правила действуют сами: они лежат в `~/.claude/CLAUDE.md` и загружаются в каждую
-сессию. Проверить, что блок на месте, можно командой `/context` внутри Claude
-Code.
+The rules work on their own: they live in `~/.claude/CLAUDE.md` and load into every
+session. Run `/context` inside Claude Code to confirm the block is there.
 
-Агент ревью вызывается фразой в чате, например «сделай ревью» для текущего диффа
-или «посмотри PR #123» для открытого PR. Он только читает: файлы не меняет, в
-GitHub не пишет, пока не попросить прямо. Отчёт приходит в терминал по
-severity: BLOCKER, WARNING, NITPICK.
+The review agent is invoked in chat, for example "review my changes" for the
+current diff or "review PR #123" for an open pull request. It only reads: it never
+edits files and never posts to GitHub unless asked explicitly. The report lands in
+the terminal grouped by severity: BLOCKER, WARNING, NITPICK.
 
-## Как это устроено
+## Before / after
 
-`install.sh` склеивает `claude/rules/*.md` в порядке имён и вставляет результат в
-`~/.claude/CLAUDE.md` между маркерами:
+A bug report, default behaviour:
+
+> Added a null check in `Client.kt` so it no longer crashes. Let me know if you
+> want me to add tests too!
+
+The same report under these rules:
+
+> Confidence 96%: the cause is in `Client.kt:42` (NPE on an empty response, in the
+> stack trace), the fix returns an error instead of dereferencing, two callers,
+> both in `SyncWorker`, covered by `ClientTest`, ran it: 18 passed. Nothing
+> unverified.
+>
+> Not done: `RetryPolicy` untouched; it has its own timeout contract and changing
+> it would alter retry behaviour, which is a separate task.
+
+## How it works
+
+`install.sh` concatenates `claude/rules/*.md` in filename order and splices the
+result into `~/.claude/CLAUDE.md` between two markers:
 
 ```
 <!-- egor-ai:start -->
@@ -76,49 +106,52 @@ severity: BLOCKER, WARNING, NITPICK.
 <!-- egor-ai:end -->
 ```
 
-Всё вне маркеров не трогается, поэтому файл можно править руками, а рядом могут
-жить блоки других installer'ов. Повторный запуск заменяет блок, а не дублирует.
+Nothing outside the markers is touched, so the file stays hand-editable and other
+installers' blocks can live next to it. Re-running replaces the block instead of
+duplicating it.
 
-Копия в `CLAUDE.md` не отстаёт от репозитория благодаря двум страховкам:
+Two safeguards keep the copy fresh:
 
-- **git hooks.** `core.hooksPath` указывает на `githooks/`, и после `commit`,
-  `pull`, `checkout` и `rebase` installer перезапускается сам.
-- **SessionStart hook.** `egor-ai-rules-sync.sh` в начале сессии сравнивает блок
-  с `claude/rules/` через `install.sh --check`. Если блок отстал, hook
-  пересобирает его и выводит свежие правила прямо в контекст этой сессии.
+- **Git hooks.** `core.hooksPath` points at `githooks/`, and the installer re-runs
+  after `commit`, `pull`, `checkout` and `rebase`.
+- **SessionStart hook.** `egor-ai-rules-sync.sh` compares the block with
+  `claude/rules/` via `install.sh --check` at session start. If the block is
+  stale, the hook rebuilds it and prints the fresh rules straight into that
+  session's context.
 
-| Путь | Что |
+| Path | What |
 |---|---|
-| `claude/rules/*.md` | Правила. Номер в имени задаёт порядок склейки |
-| `claude/agents/` | Субагенты → `~/.claude/agents/` |
-| `claude/commands/` | Slash-команды → `~/.claude/commands/` |
-| `claude/hooks/` | Хуки → `~/.claude/hooks/`; `egor-ai-rules-sync.sh` регистрируется как SessionStart |
-| `githooks/` | git hooks репозитория |
+| `claude/rules/*.md` | Rules. The number prefix sets the concatenation order |
+| `claude/agents/` | Subagents → `~/.claude/agents/` |
+| `claude/commands/` | Slash commands → `~/.claude/commands/` |
+| `claude/hooks/` | Hooks → `~/.claude/hooks/`; `egor-ai-rules-sync.sh` is registered as `SessionStart` |
+| `githooks/` | Repo git hooks |
 
-| Файл правил | Когда действует |
+| Rule file | When it applies |
 |---|---|
-| `10-communication-style` | Всегда: язык, длина, понятность, достоверность, отчёты |
-| `20-crash-fix-confidence` | При разборе краша или бага |
-| `30-implementation` | При написании любого кода |
-| `40-kmp-mobile` | В KMP-репозиториях: корутины, состояние, DI, Compose, SwiftUI |
-| `45-mobile-feature-delivery` | Там же, при реализации фичи по спеке и Figma |
+| `10-communication-style` | Always: language, length, clarity, sourcing, reports |
+| `20-crash-fix-confidence` | When investigating a crash or a bug |
+| `30-implementation` | When writing any code |
+| `40-kmp-mobile` | In KMP repos: coroutines, state, DI, Compose, SwiftUI |
+| `45-mobile-feature-delivery` | Same repos, when building a feature from a spec and Figma |
 
-Все правила лежат в одном блоке и загружены всегда. Это дороже по токенам, чем
-path-scoped rules, но правило вида «не применяй фикс без 93% уверенности»
-бесполезно, если оно может не подгрузиться.
+Everything sits in one always-loaded block. That costs more tokens than
+path-scoped rules, but a rule like "no bug fix below 93% confidence" is useless
+if it might not be loaded.
 
-## Как адаптировать под себя
+## Make it yours
 
-1. Правила в `claude/rules/` — обычный markdown. Удали файлы, которые не про
-   твой стек (`40-*`, `45-*`), или поправь текст.
-2. Новое правило — файл `claude/rules/NN-name.md`, где `NN` задаёт порядок.
-   Начинай с заголовка `##`, потому что уровень `#` в `CLAUDE.md` уже занят.
-3. Правило пишется наблюдаемо: «будь краток» модель не исполняет, «ответ не
-   больше пяти строк» исполняет. На неочевидное правило — пример «было / стало».
-4. Плейсхолдер `{{REPO_ROOT}}` в тексте правила подставляется на путь checkout'а.
-5. После правки `./install.sh` и новая сессия.
+1. Rules in `claude/rules/` are plain markdown. Delete the files that are not
+   about your stack (`40-*`, `45-*`) or edit the text.
+2. A new rule is a file `claude/rules/NN-name.md`, where `NN` sets the order.
+   Start with a `##` heading, because the `#` level in `CLAUDE.md` is taken.
+3. Write rules as observable behaviour: the model does not execute "be concise",
+   it executes "answers are at most five lines". Give a before / after example for
+   anything non-obvious.
+4. The placeholder `{{REPO_ROOT}}` inside a rule expands to the checkout path.
+5. Run `./install.sh` and open a new session.
 
-Команды installer'а:
+Installer commands:
 
 ```bash
 ./install.sh --dry-run
@@ -128,5 +161,15 @@ path-scoped rules, но правило вида «не применяй фикс
 ./install.sh --check
 ```
 
-`--dry-run` печатает блок, который будет записан. `--check` возвращает 0, если
-`CLAUDE.md` совпадает с `claude/rules/`, и 1, если отстал.
+`--dry-run` prints the block that would be written. `--check` exits 0 when
+`CLAUDE.md` matches `claude/rules/` and 1 when it is stale.
+
+## Contributing
+
+Issues and pull requests are welcome. A rule change should say which repeated
+mistake it prevents and include a before / after example; see
+[Make it yours](#make-it-yours) for the format.
+
+## License
+
+[MIT](LICENSE)
